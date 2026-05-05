@@ -1,26 +1,38 @@
 # 📋 Board Meeting Minutes Manager
 
-> A Spring Boot + PostgreSQL backend for managing board meeting minutes with AI-assisted summaries and recommendations.
+> Tool-99 — AI-powered Board Meeting Minutes Manager | Capstone Project | Sprint: 14 April – 9 May 2026
 
 ---
 
-## 📁 Project Structure
+## 🏗️ Architecture
 
 ```
-Board Meeting Minutes Manager/
-├── backend/                          # Spring Boot application
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/                 # Java source code
-│   │       └── resources/
-│   │           ├── application.yml   # App configuration
-│   │           └── db/migration/
-│   │               └── V1__init.sql  # Flyway migration
-│   ├── Dockerfile
-│   └── pom.xml
-├── docker-compose.yml                # Docker orchestration
-├── .env.example                      # Environment variable template
-└── README.md
+┌─────────────────────────────────────────────────────────────┐
+│                        Browser                              │
+│                    http://localhost                         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│                  React Frontend (Port 80)                   │
+│              React 18 + Vite + Tailwind CSS                 │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTP (Axios)
+┌──────────────────────▼──────────────────────────────────────┐
+│             Spring Boot Backend (Port 8080)                 │
+│         Java 17 + Spring Security + JWT + Redis             │
+└────────┬─────────────────────────────┬───────────────────────┘
+         │                             │
+┌────────▼────────┐          ┌─────────▼──────────┐
+│  PostgreSQL 15  │          │  Flask AI Service  │
+│   (Port 5432)   │          │    (Port 5000)     │
+│   Primary DB    │          │  Groq LLaMA-3.3    │
+└─────────────────┘          └────────────────────┘
+         │
+┌────────▼────────┐
+│    Redis 7      │
+│   (Port 6379)   │
+│  Cache Layer    │
+└─────────────────┘
 ```
 
 ---
@@ -30,36 +42,71 @@ Board Meeting Minutes Manager/
 | Layer       | Technology                        |
 |-------------|-----------------------------------|
 | Language    | Java 17                           |
-| Framework   | Spring Boot 3.x                   |
+| Framework   | Spring Boot 3.2.5                 |
 | Database    | PostgreSQL 15                     |
+| Cache       | Redis 7                           |
 | Migrations  | Flyway                            |
-| ORM         | Spring Data JPA / Hibernate       |
-| AI          | OpenAI API (GPT-4o)               |
+| Security    | Spring Security + JWT             |
+| AI          | Flask + Groq API (LLaMA-3.3-70b)  |
+| Frontend    | React 18 + Vite + Tailwind CSS    |
+| HTTP Client | Axios                             |
 | Containers  | Docker + Docker Compose           |
+
+---
+
+## 📁 Project Structure
+
+```
+board-meeting-minutes-manager/
+├── backend/                          # Spring Boot application
+│   ├── src/main/java/com/internship/tool/
+│   │   ├── config/                   # Security, Redis, Mail, Swagger, DataSeeder
+│   │   ├── controller/               # REST endpoints
+│   │   ├── entity/                   # JPA table models
+│   │   ├── exception/                # Custom exceptions + GlobalExceptionHandler
+│   │   ├── repository/               # DB queries
+│   │   └── service/                  # Business logic
+│   ├── src/main/resources/
+│   │   ├── db/migration/             # Flyway SQL migrations
+│   │   └── application.yml           # App configuration
+│   └── pom.xml
+├── ai-service/                       # Flask Python microservice
+│   ├── routes/                       # API endpoint files
+│   ├── services/                     # Groq client
+│   ├── prompts/                      # Prompt templates
+│   └── app.py
+├── frontend/                         # React + Vite frontend
+│   └── src/
+│       ├── components/               # Reusable UI components
+│       ├── context/                  # Auth context
+│       ├── pages/                    # Page components
+│       └── services/                 # API service calls
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
 
 ---
 
 ## 🗄️ Database Schema
 
-**Table: `board_meeting_minutes`**
+**Table: `meeting_minutes`**
 
-| Column               | Type          | Description                              |
-|----------------------|---------------|------------------------------------------|
-| `id`                 | BIGSERIAL     | Auto-increment primary key               |
-| `title`              | VARCHAR(255)  | Meeting title (required)                 |
-| `meeting_date`       | DATE          | Date of the meeting (required)           |
-| `attendees`          | TEXT          | Comma-separated list of attendees        |
-| `agenda`             | TEXT          | Meeting agenda                           |
-| `minutes_text`       | TEXT          | Full meeting minutes (required)          |
-| `status`             | VARCHAR(50)   | Workflow status — default `DRAFT`        |
-| `ai_description`     | TEXT          | AI-generated summary                     |
-| `ai_recommendations` | TEXT          | AI-generated action items                |
-| `ai_report`          | TEXT          | Full AI-generated report                 |
-| `is_fallback`        | BOOLEAN       | True if AI used a fallback response      |
-| `created_by`         | VARCHAR(100)  | Creator's username                       |
-| `created_at`         | TIMESTAMP     | Record creation time                     |
-| `updated_at`         | TIMESTAMP     | Last update time                         |
-| `deleted`            | BOOLEAN       | Soft-delete flag — default `false`       |
+| Column               | Type          | Description                          |
+|----------------------|---------------|--------------------------------------|
+| `id`                 | BIGSERIAL     | Auto-increment primary key           |
+| `title`              | VARCHAR(255)  | Meeting title (required)             |
+| `meeting_date`       | DATE          | Date of the meeting (required)       |
+| `attendees`          | TEXT          | Comma-separated list of attendees    |
+| `agenda`             | TEXT          | Meeting agenda                       |
+| `content`            | TEXT          | Full meeting minutes (required)      |
+| `status`             | VARCHAR(50)   | DRAFT / PUBLISHED / ARCHIVED         |
+| `ai_description`     | TEXT          | AI-generated summary                 |
+| `ai_recommendations` | TEXT          | AI-generated action items            |
+| `ai_report`          | TEXT          | Full AI-generated report             |
+| `is_deleted`         | BOOLEAN       | Soft-delete flag                     |
+| `created_at`         | TIMESTAMP     | Record creation time                 |
+| `updated_at`         | TIMESTAMP     | Last update time                     |
 
 ---
 
@@ -76,7 +123,7 @@ Board Meeting Minutes Manager/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/board-meeting-minutes-manager.git
+git clone <repository-url>
 cd board-meeting-minutes-manager
 ```
 
@@ -85,14 +132,28 @@ cd board-meeting-minutes-manager
 ### 2. Configure Environment Variables
 
 ```bash
-# Copy the example file
 cp .env.example .env
-
-# Edit .env and fill in your values
-notepad .env        # Windows
-# or
-nano .env           # Linux / macOS
 ```
+
+Edit `.env` and fill in your values:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `POSTGRES_DB` | Database name | `boardminutes` |
+| `POSTGRES_USER` | DB username | `postgres` |
+| `POSTGRES_PASSWORD` | DB password | `yourpassword` |
+| `POSTGRES_PORT` | DB port | `5432` |
+| `SERVER_PORT` | Backend port | `8080` |
+| `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `JWT_SECRET` | JWT secret key (min 32 chars) | `mySecretKey1234567890abcdefghij` |
+| `JWT_EXPIRATION_MS` | Token expiry in ms | `86400000` |
+| `MAIL_HOST` | SMTP host | `smtp.gmail.com` |
+| `MAIL_PORT` | SMTP port | `587` |
+| `MAIL_USERNAME` | Email address | `your@gmail.com` |
+| `MAIL_PASSWORD` | Gmail App Password | `xxxx xxxx xxxx xxxx` |
+| `AI_SERVICE_URL` | AI service URL | `http://ai-service:5000` |
+| `GROQ_API_KEY` | Groq API key | `gsk_...` |
 
 > ⚠️ **Never commit your `.env` file.** It is already listed in `.gitignore`.
 
@@ -101,8 +162,8 @@ nano .env           # Linux / macOS
 ### 3. Run with Docker Compose
 
 ```bash
-# Start all services (PostgreSQL + Backend)
-docker-compose up -d
+# Start all services
+docker-compose up --build -d
 
 # View logs
 docker-compose logs -f backend
@@ -110,86 +171,91 @@ docker-compose logs -f backend
 # Stop all services
 docker-compose down
 
-# Stop and remove volumes (fresh DB)
+# Fresh restart (wipes DB)
 docker-compose down -v
+docker-compose up --build -d
 ```
 
 ---
 
-### 4. Run Locally (without Docker)
+### 4. Verify Application is Running
 
-Make sure PostgreSQL is running locally, then:
-
-```bash
-cd backend
-
-# Set environment variables (Windows PowerShell)
-$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/board_meeting_db"
-$env:SPRING_DATASOURCE_USERNAME="board_user"
-$env:SPRING_DATASOURCE_PASSWORD="your_password"
-$env:OPENAI_API_KEY="sk-your-key"
-
-# Run the application
-./mvnw spring-boot:run
-```
+| Service | URL | Expected |
+|---------|-----|----------|
+| Frontend | http://localhost | Login page |
+| Backend Health | http://localhost:8080/actuator/health | `{"status":"UP"}` |
+| Swagger UI | http://localhost:8080/swagger-ui.html | API docs |
+| AI Health | http://localhost:5000/health | `{"status":"ok"}` |
 
 ---
 
-### 5. Verify Application is Running
+## 🔐 API Endpoints
 
-```bash
-curl http://localhost:8080/actuator/health
-```
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login and get JWT token |
+| POST | `/api/auth/refresh` | Refresh JWT token |
 
-Expected response:
-```json
-{ "status": "UP" }
-```
-
----
-
-## 🛢️ Database Migrations (Flyway)
-
-Flyway runs automatically on startup. Migration files are located at:
-
-```
-backend/src/main/resources/db/migration/
-```
-
-| File           | Description          |
-|----------------|----------------------|
-| `V1__init.sql` | Initial schema setup |
-
-To add a new migration, create `V2__<description>.sql` in the same directory.
+### Meeting Minutes
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/minutes` | Get all minutes (paginated) |
+| GET | `/api/minutes/{id}` | Get by ID |
+| POST | `/api/minutes` | Create new minutes |
+| PUT | `/api/minutes/{id}` | Update minutes |
+| DELETE | `/api/minutes/{id}` | Soft delete |
+| GET | `/api/minutes/search?q=` | Search by title/content |
+| GET | `/api/minutes/filter/status?status=` | Filter by status |
+| GET | `/api/minutes/filter/date-range?start=&end=` | Filter by date range |
 
 ---
 
 ## 🤖 AI Features
 
-The application integrates with OpenAI to provide:
+The application integrates with Groq API (LLaMA-3.3-70b) to provide:
 
-- **`ai_description`** — Auto-generated meeting summary
-- **`ai_recommendations`** — Action items extracted from minutes
-- **`ai_report`** — Full structured AI report
-- **`is_fallback`** — Indicates if AI used a fallback due to API issues
-
-Configure your API key in `.env`:
-```
-OPENAI_API_KEY=sk-your-openai-api-key-here
-OPENAI_MODEL=gpt-4o
-```
+- **Describe** — Auto-generated meeting summary
+- **Recommend** — Action items extracted from minutes
+- **Generate Report** — Full structured AI report
 
 ---
 
-## 🔐 Security
+## 🔒 Security Features
 
 - JWT-based authentication
-- Passwords hashed with BCrypt
-- Soft delete pattern (`deleted = true`) instead of hard deletes
-- Environment variables used for all secrets — no hardcoded credentials
+- BCrypt password hashing
+- Role-based access control (USER / ADMIN)
+- CORS configured
+- Input validation on all endpoints
+- Soft delete pattern
+- No hardcoded secrets — all via environment variables
+
+---
+
+## 🗃️ Database Migrations (Flyway)
+
+| File | Description |
+|------|-------------|
+| `V1__init.sql` | Initial schema — meeting_minutes + users tables |
+| `V2__audit_log.sql` | Audit log table |
+| `V3__audit_log_indexes.sql` | Indexes for audit log |
+
+---
+
+## 👥 Team
+
+| Role | Responsibilities |
+|------|-----------------|
+| Java Developer 1 | Spring Boot setup, Service layer, JWT auth, Docker Compose, Data seeder, README |
+| Java Developer 2 | DB schema (Flyway), Repository layer, React frontend, Email notifications |
+| AI Developer 1 | Flask setup, /describe and /recommend endpoints |
+| AI Developer 2 | GroqClient, /generate-report, Security review |
+| Security Reviewer | Security testing, SECURITY.md |
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License.
+MIT License — Capstone Project | Tool-99 | Sprint: 14 April – 9 May 2026
