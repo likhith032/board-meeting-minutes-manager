@@ -1,16 +1,8 @@
-def get_recommendation_prompt(content):
+def get_report_prompt(content, agenda):
     return f"""
-    Analyze the following meeting minutes and provide exactly 3 actionable recommendations.
+    Task: Create a formal Board Meeting Report.
+    Agenda Context: {agenda}
+    Raw Minutes: {content}
     
-    Data: {content}
-
-    Return ONLY a JSON array of objects.
-    Format:
-    [
-      {{
-        "action_type": "string (Task/Policy/Finance/Meeting)",
-        "description": "string (The recommendation)",
-        "priority": "string (High/Medium/Low)"
-      }}
-    ]
+    Output: JSON object (title, summary, overview, key_items, recommendations).
     """
